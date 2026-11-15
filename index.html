@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#83bce5">
+<title>ProjectX Weather</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;color:#29445b;background:linear-gradient(#9bd4f3,#e3f5e8);min-height:100vh}
+.app{max-width:1340px;margin:auto;padding:14px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{font-size:clamp(22px,3vw,34px);margin:5px 0}
+.subtitle{color:#52758b;font-size:14px}
+.city{background:#ffffffb8;padding:10px 16px;border-radius:20px;font-weight:bold}
+main{display:grid;grid-template-columns:1.6fr 1fr;gap:15px;margin-top:14px}
+.scene{position:relative;min-height:440px;overflow:hidden;border-radius:25px;background:linear-gradient(#82c7ed 0%,#c5e9f7 65%,#8bc77a 66%,#6aaa60 100%);box-shadow:0 8px 25px #527b8b55}
+.sun{position:absolute;right:12%;top:9%;width:75px;height:75px;border-radius:50%;background:#ffe77b;box-shadow:0 0 35px #ffe77b}
+.cloud{position:absolute;top:15%;left:13%;font-size:65px;animation:drift 18s linear infinite}
+.cloud.two{top:28%;left:65%;font-size:48px;animation-duration:25s}
+@keyframes drift{50%{transform:translateX(65px)}}
+.hill{position:absolute;bottom:0;width:100%;height:34%;background:#79bd70;border-radius:50% 50% 0 0/25% 25% 0 0}
+.house{position:absolute;bottom:18%;left:50%;transform:translateX(-50%);width:min(52%,360px);height:220px}
+.roof{position:absolute;top:0;left:-7%;width:114%;height:100px;background:#a84e3e;clip-path:polygon(50% 0,100% 100%,0 100%);filter:drop-shadow(0 4px 2px #754333)}
+.wall{position:absolute;bottom:0;left:8%;width:84%;height:145px;background:#ffe2a9;border:5px solid #bd8153;border-radius:5px}
+.window{position:absolute;top:30px;left:15%;width:65px;height:65px;background:#8bd3ef;border:6px solid #fff4d2;border-radius:7px}
+.window:after{content:"";position:absolute;left:50%;height:100%;border-left:4px solid #fff4d2}
+.door{position:absolute;bottom:0;right:14%;width:53px;height:94px;background:#9c6747;border:5px solid #f5d5a1;border-radius:8px 8px 0 0}
+.chimney{position:absolute;top:2px;right:17%;width:28px;height:65px;background:#a85c48;border:4px solid #884536}
+/* ProjectX: дым из трубы при температуре ниже +10 */
+.chimney-smoke{display:none;pointer-events:none}
+.chimney-smoke.active{display:inline}
+.chimney-smoke .smoke-puff{
+ fill:#d8e0e5;
+ opacity:0;
+ filter:blur(2px);
+ transform-box:fill-box;
+ transform-origin:center;
+ animation:chimneySmokeRise 3.6s ease-out infinite;
+}
+.chimney-smoke .smoke-puff:nth-child(2){animation-delay:1.2s}
+.chimney-smoke .smoke-puff:nth-child(3){animation-delay:2.4s}
+@keyframes chimneySmokeRise{
+ 0%{opacity:0;transform:translate(0,0) scale(.65)}
+ 15%{opacity:.55}
+ 100%{opacity:0;transform:translate(12px,-58px) scale(1.8)}
+}
+.characters{position:absolute;bottom:7%;left:0;width:100%;display:flex;justify-content:center;align-items:end;gap:18px;font-size:clamp(42px,6vw,65px);z-index:3}
+.character{filter:drop-shadow(0 3px 2px #3455);animation:bob 2.5s ease-in-out infinite}
+.character:nth-child(2){animation-delay:.5s}
+.character:nth-child(3){font-size:clamp(35px,5vw,52px);animation-delay:1s}
+@keyframes bob{50%{transform:translateY(-7px)}}
+.weather-effect{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+.weather-effect span{position:absolute;top:-35px;animation:fall 32s linear infinite;font-size:22px}
+@keyframes fall{to{transform:translateY(520px) translateX(35px)}}
+.panel{background:#ffffffc9;border:1px solid #fff;border-radius:25px;padding:20px;box-shadow:0 8px 25px #527b8b33}
+.temp{font-size:64px;font-weight:bold;margin:5px 0;color:#315d78}
+.condition{font-size:20px}
+.details{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
+.detail{background:#edf7fa;padding:13px;border-radius:14px}
+.detail b{display:block;font-size:19px;margin-top:5px}
+.modes{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:15px}
+.mode{border:0;border-radius:14px;background:#ffffffd9;padding:12px 5px;color:#31536b;font-size:14px;cursor:pointer}
+.mode.active{background:#397da7;color:white}
+footer{text-align:center;color:#52758b;font-size:12px;margin:13px}
+@media(max-width:700px){main{grid-template-columns:1fr}.scene{min-height:350px}.modes{grid-template-columns:repeat(3,1fr)}}
+>
+body {
+ background:linear-gradient(135deg,#101827,#182b42,#101827);
+ color:#e7efff;
+}
+.subtitle,footer {color:#a4b7d0}
+.city,.panel {
+ background:#1d2b40;
+ color:#e7efff;
+ border:1px solid #344a65;
+}
+.detail {
+ background:#293b53;
+ color:#e7efff;
+}
+.detail b {color:#ffffff}
+.mode {
+ background:#25364d;
+ color:#e7efff;
+ border:1px solid #405570;
+}
+.mode.active {
+ background:#477eae;
+ color:white;
+}
+.scene {
+ background:linear-gradient(#172d4c 0%,#29476b 65%,#31533f 66%,#24432f 100%);
+ box-shadow:0 8px 30px #0008;
+}
+.hill {background:#31533f}
+.cloud {filter:brightness(.75)}
+.theme-toggle {
+ background:#344b68;color:white;border:1px solid #6683a4;
+ border-radius:18px;padding:11px 15px;font-size:14px;cursor:pointer;
+}
+
+
+
+
+
+
+
+
+.scene.day {
+ background:linear-gradient(#72c6f0 0%,#c9edff 65%,#8bc77a 66%,#6aaa60 100%);
+}
+.scene.day .hill {background:#79bd70}
+.scene.day .cloud {filter:none}
+
+
+.scene.night {
+ background:linear-gradient(#071329 0%,#17294b 65%,#263b35 66%,#172d27 100%);
+}
+.scene.night .hill {background:#263b35}
+.scene.night .cloud {filter:brightness(.55)}
+.scene.night .sun {
+ background:#e7edff;
+ box-shadow:0 0 28px #b7d2ff99;
+}
+.scene.night:before {
+ content:"";
+ position:absolute;inset:0;pointer-events:none;
+ background-image:
+ radial-gradient(2px 2px at 10% 12%,white 99%,transparent),
+ radial-gradient(2px 2px at 28% 25%,white 99%,transparent),
+ radial-gradient(2px 2px at 48% 10%,white 99%,transparent),
+ radial-gradient(2px 2px at 70% 18%,white 99%,transparent),
+ radial-gradient(2px 2px at 88% 9%,white 99%,transparent),
+ radial-gradient(2px 2px at 58% 32%,white 99%,transparent),
+ radial-gradient(2px 2px at 20% 38%,white 99%,transparent);
+}
+.scene.night .window {
+ background:#ffe6a0;
+ box-shadow:0 0 18px #ffdc77;
+}
+
+/* PROJECTX_DOG_ANIMATIONS */
+#projectx-dog {
+ transform-box: fill-box;
+ transform-origin: center;
+}
+#projectx-dog .px-dog-front-paw {
+ transform-box: fill-box;
+ transform-origin: 50% 10%;
+}
+#projectx-dog .px-dog-head {
+ transform-box: fill-box;
+ transform-origin: 50% 80%;
+}
+#projectx-dog .px-dog-bone {
+ opacity: 0;
+ transform-box: fill-box;
+ transform-origin: center;
+}
+#projectx-dog[data-weather="cloud"] .px-dog-bone {
+ opacity: 1;
+ animation: pxDogBoneHold 1.5s ease-in-out infinite;
+}
+/* Неподвижная ямка на земле */
+#scene .px-ground-hole {
+ opacity: 0;
+ transition: opacity .25s ease;
+}
+#scene[data-weather="cloud"] .px-ground-hole,
+#scene[data-weather="sun"] .px-ground-hole {
+ opacity: 1;
+}
+#scene .px-sun-bone {
+ opacity: 0;
+ pointer-events: none;
+}
+#scene[data-weather="sun"] .px-sun-bone {
+ opacity: 1;
+ transform-box: fill-box;
+ transform-origin: center;
+ animation: pxSunBoneWiggle 2s ease-in-out infinite;
+}
+@keyframes pxSunBoneWiggle {
+ 0%,100% { translate: 0 0; rotate: -3deg; }
+ 50% { translate: 0 -2px; rotate: 3deg; }
+}
+
+/* Летящая земля — отдельный слой */
+#scene .px-ground-dirt {
+ opacity: 0;
+ pointer-events: none;
+}
+#scene[data-weather="cloud"] .px-ground-dirt {
+ opacity: 1;
+}
+#scene[data-weather="cloud"] .px-clod-a {
+ animation: pxGroundClodA .48s ease-out infinite;
+}
+#scene[data-weather="cloud"] .px-clod-b {
+ animation: pxGroundClodB .58s ease-out infinite .12s;
+}
+#scene[data-weather="cloud"] .px-clod-c {
+ animation: pxGroundClodC .52s ease-out infinite .24s;
+}
+#scene[data-weather="cloud"] .px-clod-d {
+ animation: pxGroundClodD .62s ease-out infinite .08s;
+}
+@keyframes pxGroundClodA {
+ 0% { translate: 0 0; opacity: 1; }
+ 100% { translate: -9px -11px; opacity: 0; }
+}
+@keyframes pxGroundClodB {
+ 0% { translate: 0 0; opacity: 1; }
+ 100% { translate: -13px -7px; opacity: 0; }
+}
+@keyframes pxGroundClodC {
+ 0% { translate: 0 0; opacity: 1; }
+ 100% { translate: -6px -15px; opacity: 0; }
+}
+@keyframes pxGroundClodD {
+ 0% { translate: 0 0; opacity: 1; }
+ 100% { translate: -11px -5px; opacity: 0; }
+}
+#projectx-dog[data-weather="sun"] .px-dog-front-paw {
+ animation: pxDogPawDig .32s ease-in-out infinite alternate;
+}
+#projectx-dog[data-weather="cloud"] .px-dog-front-paw {
+ animation: pxDogPawBury .48s ease-in-out infinite alternate;
+}
+#projectx-dog[data-weather="cloud"] .px-dog-head {
+ animation: pxDogBuryHead 1.5s ease-in-out infinite;
+}
+#projectx-dog[data-weather="rain"] {
+ animation: pxDogRain 1.1s ease-in-out infinite;
+}
+#projectx-dog[data-weather="snow"] {
+ animation: pxDogSnow 2.2s ease-in-out infinite;
+}
+#projectx-dog[data-weather="cloud"] {
+ animation: pxDogSniff 1.5s ease-in-out infinite;
+}
+#projectx-dog[data-weather="sun"] {
+ animation: pxDogDig 0.65s ease-in-out infinite;
+}
+#projectx-dog[data-weather="wind"] {
+ animation: pxDogWind 1.8s ease-in-out infinite;
+}
+#projectx-dog[data-weather="fog"] {
+ animation: pxDogFog 14s linear infinite,
+            pxDogFogFace 14s steps(1,end) infinite;
+}
+#projectx-dog[data-weather="blizzard"] {
+ animation: pxDogBlizzard 1.4s ease-in-out infinite;
+}
+@keyframes pxDogRain {
+ 0%,100% { translate: 0 0; }
+ 50% { translate: 0 -5px; }
+}
+@keyframes pxDogSnow {
+ 0%,100% { rotate: 0deg; }
+ 25% { rotate: -9deg; }
+ 75% { rotate: 9deg; }
+}
+@keyframes pxDogSniff {
+ 0%,100% { rotate: 0deg; }
+ 50% { rotate: -3deg; }
+}
+@keyframes pxDogDig {
+ 0%,100% { translate: 0 0; }
+ 50% { translate: 0 -3px; }
+}
+@keyframes pxDogPawDig {
+ 0% { translate: 0 0; rotate: 0deg; }
+ 100% { translate: 3px 3px; rotate: -16deg; }
+}
+@keyframes pxDogPawBury {
+ 0% { translate: 0 0; rotate: 0deg; }
+ 100% { translate: 4px 2px; rotate: -22deg; }
+}
+@keyframes pxDogBuryHead {
+ 0%,100% { translate: 0 0; rotate: 0deg; }
+ 50% { translate: 2px 4px; rotate: 5deg; }
+}
+@keyframes pxDirtFlyA {
+ 0% { translate: 0 0; opacity: 1; }
+ 100% { translate: 7px -12px; opacity: 0; }
+}
+@keyframes pxDirtFlyB {
+ 0% { translate: 0 0; opacity: 1; }
+ 100% { translate: 10px -8px; opacity: 0; }
+}
+@keyframes pxDirtFlyC {
+ 0% { translate: 0 0; opacity: 1; }
+ 100% { translate: 5px -14px; opacity: 0; }
+}
+@keyframes pxDirtFlyD {
+ 0% { translate: 0 0; opacity: 1; }
+ 100% { translate: 8px -6px; opacity: 0; }
+}
+@keyframes pxDogBoneHold {
+ 0%,100% { translate: 0 0; rotate: -8deg; }
+ 50% { translate: 0 2px; rotate: -3deg; }
+}
+@keyframes pxDogWind {
+ 0%,100% { rotate: 0deg; }
+ 50% { rotate: -5deg; }
+}
+@keyframes pxDogFog {
+ 0%,100% { translate: 0 0; }
+ 50% { translate: calc(-1 * var(--px-dog-fog-travel, 0px)) 0; }
+}
+@keyframes pxDogFogFace {
+ 0%,49.9% { scale: 1 1; }
+ 50%,100% { scale: -1 1; }
+}
+@keyframes pxDogBlizzard {
+ 0%,100% { translate: 0 0; rotate: 0deg; }
+ 50% { translate: 0 4px; rotate: -4deg; }
+}
+.scene-art {
+ position:absolute;
+ left:0;
+ bottom:0;
+ width:100%;
+ height:92%;
+ z-index:3;
+ overflow:visible;
+}
+
+/* Сезонная одежда ProjectX */
+.season-outfit { display: none; }
+.season-outfit.active { display: inline; }
+/* Гардероб ProjectX */
+.wardrobe-toggle {
+ background: linear-gradient(135deg,#a78bfa,#6d5bd0);
+ color: white; border: 0; border-radius: 12px;
+ padding: 10px 15px; font-weight: bold; cursor: pointer;
+}
+.wardrobe-overlay {
+ display: none; position: fixed; inset: 0; z-index: 9999;
+ background: rgba(4,10,24,.82);
+ align-items: center; justify-content: center;
+ padding: 16px; box-sizing: border-box;
+}
+.wardrobe-overlay.open { display: flex; }
+.wardrobe-window {
+ width: min(620px,100%); max-height: 90vh; overflow-y: auto;
+ background: #14243a; color: #edf4ff;
+ border: 1px solid #354c6b; border-radius: 22px;
+ padding: 22px; box-sizing: border-box;
+ box-shadow: 0 20px 70px #0009;
+}
+.wardrobe-head {
+ display: flex; justify-content: space-between;
+ align-items: center; gap: 12px;
+}
+.wardrobe-head h2 { margin: 0; font-size: 24px; }
+.wardrobe-close {
+ border: 0; background: #263b56; color: white;
+ border-radius: 10px; padding: 9px 13px; cursor: pointer;
+}
+.wardrobe-person {
+ margin-top: 20px; padding: 16px;
+ border-radius: 16px; background: #1d324d;
+}
+.wardrobe-person h3 { margin: 0 0 12px; }
+.wardrobe-actions {
+ display: flex; flex-wrap: wrap; gap: 8px;
+}
+.wardrobe-actions button, .wardrobe-auto {
+ border: 1px solid #526987; border-radius: 10px;
+ padding: 10px 12px; background: #293f5d;
+ color: white; cursor: pointer;
+}
+.wardrobe-actions button.active {
+ background: #8068d8; border-color: #b9a8ff;
+}
+.wardrobe-auto {
+ margin-top: 18px; width: 100%;
+ background: #236b59; border-color: #3c9c7f;
+}
+.wardrobe-status {
+ color: #b8c9df; font-size: 13px; margin-top: 14px;
+}
+
+/* Постоянно тёмный общий фон сайта */
+body,
+body.day,
+body.night {
+    background: #101827 !important;
+}
+/* Зимняя метель */
+.weather-effect.blizzard span {
+ position: absolute;
+ top: -35px;
+ animation-name: blizzard;
+ animation-timing-function: linear;
+ animation-iteration-count: infinite;
+ opacity: .9;
+ text-shadow: 0 0 8px #ffffff;
+}
+
+@keyframes blizzard {
+ 0% {
+  transform: translate(-100px, -20px) rotate(0deg);
+  opacity: .3;
+ }
+ 50% {
+  opacity: 1;
+ }
+ 100% {
+  transform: translate(220px, 540px) rotate(360deg);
+  opacity: .2;
+ }
+}
+/* ProjectX: плотный движущийся туман */
+.weather-effect.fog {
+ overflow: hidden;
+ z-index: 5;
+}
+
+.weather-effect.fog .fog-layer {
+ position: absolute;
+ left: -25%;
+ width: 150%;
+ height: 105px;
+ border-radius: 50%;
+ background:
+  linear-gradient(
+   180deg,
+   transparent 0%,
+   rgba(210,230,245,.16) 25%,
+   rgba(220,238,248,.42) 50%,
+   rgba(210,230,245,.20) 75%,
+   transparent 100%
+  );
+ filter: blur(13px);
+ animation: fogDrift 12s ease-in-out infinite alternate;
+}
+
+@keyframes fogDrift {
+ 0% { transform: translateX(-9%) scaleY(.85); }
+ 50% { transform: translateX(5%) scaleY(1.15); }
+ 100% { transform: translateX(12%) scaleY(.95); }
+}
+ 50% { transform: translateX(115%) scaleY(1.2); }
+ 100% { transform: translateX(230%) scaleY(.9); }
+}
+
+/* PROJECTX_LAYOUT_140 */
+@media (min-width:1000px) {
+  main {
+    grid-template-columns: minmax(0, 1fr) 445px;
+  }
+}
+
+/* PROJECTX_PANEL_MATCH_SCENE */
+@media (min-width:701px) {
+  .panel {
+    height: 440px;
+    min-height: 440px;
+    align-self: start;
+    box-sizing: border-box;
+  }
+}
+
+/* PROJECTX TREE STUDIO */
+.right-column {
+ display:flex;
+ flex-direction:column;
+ gap:12px;
+ min-width:0;
+}
+.tree-tools {
+ background:#1d2b40;
+ border:1px solid #344a65;
+ border-radius:22px;
+ padding:16px;
+ color:#e7efff;
+}
+.tree-tools h2 {
+ font-size:19px;
+ margin:0 0 12px;
+}
+.tree-tabs {
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:8px;
+ margin-bottom:14px;
+}
+.tree-tab,.tree-choice,.tree-option,.apple-state {
+ border:1px solid #405570;
+ border-radius:12px;
+ padding:10px 8px;
+ background:#25364d;
+ color:#e7efff;
+ cursor:pointer;
+ font-size:14px;
+}
+.tree-tab.active,.tree-choice.active,.apple-state.active {
+ background:#477eae;
+ border-color:#72a9d8;
+ color:white;
+}
+.tree-choice-list,.tree-options,.apple-states {
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:8px;
+}
+.tree-option {
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:6px;
+ text-align:left;
+}
+.tree-option.active {
+ background:#315d50;
+ border-color:#5cae83;
+}
+.tree-option:disabled {
+ opacity:.45;
+ cursor:not-allowed;
+}
+.tree-help {
+ color:#a4b7d0;
+ font-size:12px;
+ line-height:1.5;
+ margin:12px 0 0;
+}
+.tree-section-title {
+ font-size:14px;
+ font-weight:bold;
+ margin:14px 0 9px;
+}
+.tree-status {
+ color:#b7d9f4;
+ font-size:13px;
+ margin:12px 0 0;
+}
+#treeSlot {
+ pointer-events:none;
+}
+@media(max-width:700px) {
+ .tree-tools {padding:13px}
+ .tree-choice-list,.tree-options {grid-template-columns:1fr 1fr}
+}
+.px-sun-bone-layer {
+ position:absolute;
+ left:0;
+ bottom:0;
+ width:100%;
+ height:92%;
+ z-index:20;
+ overflow:visible;
+ pointer-events:none;
+}
+
+#scene[data-weather="sun"] .px-sun-bone {
+ opacity: 1 !important;
+ visibility: visible !important;
+}
+/* PX_SUN_BONE_FIXED */
+#scene .px-sun-bone {
+    animation: none !important;
+    transform-box: fill-box !important;
+    transform-origin: center !important;
+    
+    translate: none !important;
+    rotate: none !important;
+}
+
+.px-sun-bone-layer {
+    bottom: -50px !important; transform: none !important;
+}
+
+/* PX_HOLE_DUST_ANIMATION */
+#scene[data-weather="sun"] .px-hole-clod ,
+#scene[data-weather="cloud"] .px-hole-clod  {
+  animation: pxHoleClodFly .65s ease-out infinite;
+  opacity: 0;
+}
+#scene[data-weather="sun"] .clod1 ,
+#scene[data-weather="cloud"] .clod1  {
+  animation-delay: 0s;
+  --hole-x: -17px;
+  --hole-y: -19px;
+}
+#scene[data-weather="sun"] .clod2 ,
+#scene[data-weather="cloud"] .clod2  {
+  animation-delay: .16s;
+  --hole-x: 14px;
+  --hole-y: -22px;
+}
+#scene[data-weather="sun"] .clod3 ,
+#scene[data-weather="cloud"] .clod3  {
+  animation-delay: .3s;
+  --hole-x: 22px;
+  --hole-y: -12px;
+}
+#scene[data-weather="sun"] .clod4 ,
+#scene[data-weather="cloud"] .clod4  {
+  animation-delay: .42s;
+  --hole-x: -9px;
+  --hole-y: -25px;
+}
+@keyframes pxHoleClodFly {
+  0% { translate: 0 0; opacity: 0; scale: .5; }
+  15% { opacity: 1; }
+  100% {
+    translate: var(--hole-x) var(--hole-y);
+    opacity: 0;
+    scale: 1.15;
+  }
+}
+#scene[data-weather="sun"] .px-hole-dust ,
+#scene[data-weather="cloud"] .px-hole-dust  {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pxHoleDustRise 1.3s ease-out infinite;
+}
+@keyframes pxHoleDustRise {
+  0% { translate: 0 5px; scale: .65; opacity: 0; }
+  25% { opacity: .65; }
+  100% { translate: 0 -22px; scale: 1.5; opacity: 0; }
+}
+
+/* PX_RAIN_PUDDLES */
+#scene .px-rain-puddles {
+  opacity: 0;
+  transition: opacity .35s ease;
+}
+
+
+/* PROJECTX GROUND SNOW */
+#scene .px-snow-ground,
+#scene .px-snow-roof {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .5s ease;
+}
+#scene[data-weather="snow"] .hill {
+  background: linear-gradient(180deg, #ffffff 0%, #f4f9ff 100%);
+}
+#scene[data-weather="snow"] .px-snow-ground,
+#scene[data-weather="snow"] .px-snow-roof {
+  opacity: 1;
+}
+#scene[data-weather="snow"] .px-rain-puddles {
+  opacity: 0;
+}
+#scene[data-weather="rain"] .px-rain-puddles {
+  opacity: 1;
+}
+
+#scene[data-weather="rain"] .px-puddle-ripple {
+  fill: none;
+  stroke: #d5f5f7;
+  stroke-width: 1.4;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pxPuddleRipple 1.8s ease-out infinite;
+}
+
+#scene[data-weather="rain"] .ripple-a2 { animation-delay: .8s; }
+#scene[data-weather="rain"] .ripple-b1 { animation-delay: .5s; }
+#scene[data-weather="rain"] .ripple-b2 { animation-delay: 1.1s; }
+#scene[data-weather="rain"] .ripple-c1 { animation-delay: .9s; }
+#scene[data-weather="rain"] .ripple-d1 { animation-delay: .4s; }
+#scene[data-weather="rain"] .ripple-e1 { animation-delay: 1.2s; }
+
+@keyframes pxPuddleRipple {
+  0% { transform: scale(.35); opacity: .8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+<div><h1>🏡 ProjectX Weather</h1><div class="subtitle">Маленький домик с большим прогнозом</div></div>
+<div style="display:flex;gap:8px;align-items:center"><button class="theme-toggle" id="themeButton">🌙 Авто</button><button class="wardrobe-toggle" id="wardrobeButton">👕 Гардероб</button><div class="city">📍 Житикара</div></div>
+</header>
+<main>
+<section>
+<div class="scene" id="scene" data-weather="sun">
+<div class="sun" id="sun"></div>
+<div class="cloud">☁️</div><div class="cloud two">☁️</div>
+<div class="hill"></div>
+<svg class="scene-art" viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
+<defs>
+ <linearGradient id="wall3d" x2="0.8" y2="1">
+  <stop stop-color="#fff0c5"/><stop offset="1" stop-color="#d99b65"/>
+ </linearGradient>
+ <linearGradient id="roof3d" x2="0.7" y2="1">
+  <stop stop-color="#e77a59"/><stop offset="1" stop-color="#873b37"/>
+ </linearGradient>
+ <linearGradient id="pxTileGradient" x2="0.2" y2="1">
+  <stop stop-color="#e39a70"/>
+  <stop offset=".35" stop-color="#b95e43"/>
+  <stop offset="1" stop-color="#71332e"/>
+ </linearGradient>
+
+ <pattern id="pxClayTiles" patternUnits="userSpaceOnUse" width="34" height="28">
+  <path d="M1 1 Q17 -2 33 1 L31 19 Q17 28 3 19 Z"
+        fill="url(#pxTileGradient)" stroke="#713027" stroke-width="1.4"/>
+  <path d="M4 3 Q17 0 30 3" fill="none"
+        stroke="#f5bc91" stroke-width="2" opacity=".8"/>
+  <path d="M3 19 Q17 27 31 19" fill="none"
+        stroke="#50221f" stroke-width="2"/>
+ </pattern>
+
+ <clipPath id="pxLeftRoofClip">
+  <path d="M290 245 L485 90 L485 245 Z"/>
+ </clipPath>
+
+ <clipPath id="pxRightRoofClip">
+  <path d="M485 90 L680 245 L485 245 Z"/>
+ </clipPath>
+ <linearGradient id="blue3d" x2="0" y2="1">
+  <stop stop-color="#65c8f4"/><stop offset="1" stop-color="#2678b7"/>
+ </linearGradient>
+ <linearGradient id="pink3d" x2="0" y2="1">
+  <stop stop-color="#ffb2c8"/><stop offset="1" stop-color="#cf527d"/>
+ </linearGradient>
+ <linearGradient id="fur3d" x2="0.7" y2="1">
+  <stop stop-color="#fff"/><stop offset="1" stop-color="#cbd5df"/>
+ </linearGradient>
+ <linearGradient id="skin3d" x2="0.7" y2="1">
+  <stop stop-color="#ffdbb8"/><stop offset="1" stop-color="#d99b78"/>
+ </linearGradient>
+ <filter id="shadow3d" x="-30%" y="-30%" width="160%" height="170%">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7"/>
+  <feOffset dy="8"/>
+  <feComponentTransfer><feFuncA type="linear" slope=".3"/></feComponentTransfer>
+  <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+ </filter>
+</defs>
+<!-- PROJECTX TREE SLOT -->
+<path class="px-snow-ground"
+      d="M0 390 Q55 380 110 386 Q175 394 235 382 Q300 372 365 386 Q430 396 490 383 Q555 373 620 386 Q690 395 750 382 Q825 372 900 387 L900 500 L0 500 Z"
+      fill="#f4f9ff" stroke="#dcecf7" stroke-width="3"/>
+<g id="treeSlot"></g>
+<!-- PX_RAIN_PUDDLES -->
+<g class="px-rain-puddles" pointer-events="none">
+  <!-- Лужа слева -->
+  <g class="px-puddle puddle-a">
+    <ellipse cx="285" cy="472" rx="48" ry="10" fill="#263e43" opacity=".35"/>
+    <ellipse cx="285" cy="469" rx="45" ry="8" fill="#397f91" stroke="#285766" stroke-width="2"/>
+    <path d="M250 468 Q270 461 292 466 Q310 469 322 465"
+          fill="none" stroke="#b5e8ee" stroke-width="2.5" opacity=".8"/>
+    <ellipse class="px-puddle-ripple ripple-a1" cx="278" cy="469" rx="10" ry="2.5"/>
+    <ellipse class="px-puddle-ripple ripple-a2" cx="300" cy="469" rx="8" ry="2"/>
+  </g>
+
+  <!-- Центральная лужа -->
+  <g class="px-puddle puddle-b">
+    <ellipse cx="690" cy="478" rx="57" ry="11" fill="#263e43" opacity=".35"/>
+    <ellipse cx="690" cy="475" rx="54" ry="9" fill="#397f91" stroke="#285766" stroke-width="2"/>
+    <path d="M648 474 Q672 467 695 472 Q717 475 733 470"
+          fill="none" stroke="#b5e8ee" stroke-width="2.5" opacity=".8"/>
+    <ellipse class="px-puddle-ripple ripple-b1" cx="680" cy="475" rx="11" ry="2.5"/>
+    <ellipse class="px-puddle-ripple ripple-b2" cx="706" cy="475" rx="8" ry="2"/>
+  </g>
+
+  <!-- Маленькая лужа справа -->
+  <g class="px-puddle puddle-c">
+    <ellipse cx="780" cy="450" rx="31" ry="7" fill="#263e43" opacity=".3"/>
+    <ellipse cx="780" cy="448" rx="28" ry="5.5" fill="#397f91" stroke="#285766" stroke-width="1.5"/>
+    <path d="M760 447 Q778 443 798 446"
+          fill="none" stroke="#b5e8ee" stroke-width="2" opacity=".8"/>
+    <ellipse class="px-puddle-ripple ripple-c1" cx="778" cy="448" rx="7" ry="1.5"/>
+  </g>
+
+  <!-- Дополнительные лужи -->
+  <g class="px-puddle puddle-d">
+    <ellipse cx="420" cy="485" rx="34" ry="6" fill="#263e43" opacity=".3"/>
+    <ellipse cx="420" cy="482" rx="31" ry="4.5" fill="#397f91" stroke="#285766" stroke-width="1.5"/>
+    <path d="M396 481 Q415 477 438 480"
+          fill="none" stroke="#b5e8ee" stroke-width="1.8" opacity=".8"/>
+    <ellipse class="px-puddle-ripple ripple-d1" cx="420" cy="482" rx="7" ry="1.5"/>
+  </g>
+
+  <g class="px-puddle puddle-e">
+    <ellipse cx="555" cy="457" rx="27" ry="6" fill="#263e43" opacity=".3"/>
+    <ellipse cx="555" cy="455" rx="24" ry="4.5" fill="#397f91" stroke="#285766" stroke-width="1.5"/>
+    <path d="M536 454 Q552 450 571 453"
+          fill="none" stroke="#b5e8ee" stroke-width="1.8" opacity=".8"/>
+    <ellipse class="px-puddle-ripple ripple-e1" cx="555" cy="455" rx="7" ry="1.5"/>
+  </g></g>
+
+
+
+<!-- Дом -->
+<ellipse cx="450" cy="438" rx="270" ry="27" fill="#172b25" opacity=".3"/>
+<g filter="url(#shadow3d)">
+ <rect x="335" y="220" width="300" height="205" rx="9" fill="url(#wall3d)" stroke="#a96848" stroke-width="9"/>
+ <path d="M290 245 L485 90 L680 245 Z" fill="url(#roof3d)" stroke="#783b35" stroke-width="10" stroke-linejoin="round"/>
+<g clip-path="url(#pxLeftRoofClip)">
+ <rect x="285" y="85" width="205" height="165"
+       fill="url(#pxClayTiles)"/>
+</g>
+ <g clip-path="url(#pxRightRoofClip)">
+ <rect x="480" y="85" width="205" height="165"
+       fill="url(#pxClayTiles)"/>
+</g>
+ <g class="px-snow-roof">
+  <path d="M292 239 L485 90 L485 105 Q466 116 448 131 Q425 148 405 163 Q380 183 358 200 Q330 221 300 246 Z"
+        fill="#f7fbff" stroke="#dcecf7" stroke-width="2" opacity=".96"
+        clip-path="url(#pxLeftRoofClip)"/>
+  <path d="M485 90 L678 239 L670 246 Q645 220 620 204 Q595 185 570 166 Q545 145 522 128 Q502 113 485 105 Z"
+        fill="#f7fbff" stroke="#dcecf7" stroke-width="2" opacity=".96"
+        clip-path="url(#pxRightRoofClip)"/>
+</g>
+<rect x="570" y="115" width="38" height="100" rx="4" fill="#a64c3d" stroke="#773c34" stroke-width="6"/>
+<g id="chimneySmoke" class="chimney-smoke">
+ <circle class="smoke-puff" cx="589" cy="111" r="8"/>
+ <circle class="smoke-puff" cx="589" cy="111" r="8"/>
+ <circle class="smoke-puff" cx="589" cy="111" r="8"/>
+</g>
+ <rect x="385" y="280" width="83" height="78" rx="7" fill="#8ed7f5" stroke="#fff0d0" stroke-width="12"/>
+ <path d="M426 280 V358 M385 319 H468" stroke="#fff0d0" stroke-width="7"/>
+ <rect x="520" y="300" width="75" height="125" rx="9" fill="#8a5439" stroke="#f6d39a" stroke-width="8"/>
+ <circle cx="578" cy="365" r="5" fill="#f8d67e"/>
+ <path d="M335 425 H635" stroke="#9d694a" stroke-width="12"/>
+ <path d="M310 245 L485 105 L660 245" fill="none" stroke="#ffad80" stroke-width="9" opacity=".6"/>
+</g>
+
+<!-- Белый ВАЗ-2107: квадратный вид спереди -->
+<g id="projectx-vaz2107" filter="url(#shadow3d)">
+
+ <!-- Тень -->
+ <ellipse cx="140" cy="438" rx="116" ry="10" fill="#101820" opacity=".4"/>
+
+ <!-- Компактные чёрные зеркала -->
+ <path d="M48 350 L23 347 M232 350 L257 347"
+       stroke="#101317" stroke-width="6" stroke-linecap="round"/>
+ <rect x="10" y="337" width="24" height="18" rx="4"
+       fill="#15191d" stroke="#050708" stroke-width="2"/>
+ <rect x="246" y="337" width="24" height="18" rx="4"
+       fill="#15191d" stroke="#050708" stroke-width="2"/>
+ <path d="M14 342 H30 M250 342 H266"
+       stroke="#59616a" stroke-width="1.5" opacity=".7"/>
+
+ <!-- Квадратный кузов с широкой крышей -->
+ <path d="M38 351
+          L42 329
+          L57 305
+          L72 296
+          L208 296
+          L223 305
+          L238 329
+          L242 351
+          L250 405
+          L246 426
+          L34 426
+          L30 405 Z"
+       fill="#f5f7f8" stroke="#a5afb6" stroke-width="4"
+       stroke-linejoin="miter"/>
+
+ <!-- Лобовое стекло с сильно закруглёнными верхними углами -->
+ <path d="M42 348
+          L45 326
+          L55 310
+          Q62 298 78 298
+          L202 298
+          Q218 298 225 310
+          L235 326
+          L238 348 Z"
+       fill="#101d2b" stroke="#aeb8c0" stroke-width="4"
+       stroke-linejoin="round"/>
+
+ <!-- Тёмная тонировка и отражения -->
+ <path d="M53 325 L62 309 Q68 302 81 302
+          L137 302 L119 345 L49 345 Z"
+       fill="#718da3" opacity=".20"/>
+ <path d="M145 302 L199 302 Q212 302 218 310
+          L227 326 L231 345 L145 345 Z"
+       fill="#050e19" opacity=".55"/>
+ <path d="M82 304 H198"
+       stroke="#8199a9" stroke-width="2" opacity=".3"/>
+
+ <!-- Нижняя рамка -->
+ <path d="M42 350 H238"
+       stroke="#cbd2d7" stroke-width="4"/>
+ <!-- Плоский квадратный капот -->
+ <path d="M38 353 L242 353 L235 383 L45 383 Z"
+       fill="#ffffff" stroke="#aeb7be" stroke-width="3"/>
+ <path d="M49 360 H231" stroke="#d8dfe3" stroke-width="2"/>
+ <path d="M140 354 V381" stroke="#e1e5e8" stroke-width="2"/>
+
+ <!-- Прямая передняя панель -->
+ <path d="M35 383 L245 383 L247 415 L33 415 Z"
+       fill="#e9edf0" stroke="#9da7af" stroke-width="3"/>
+
+ <!-- Чёрная решётка без хрома -->
+ <rect x="100" y="383" width="80" height="32"
+       fill="#101317" stroke="#080a0c" stroke-width="2"/>
+ <g stroke="#555d64" stroke-width="2">
+  <path d="M103 389 H177 M103 395 H177 M103 401 H177 M103 407 H177"/>
+ </g>
+
+ <!-- Фары и поворотники в стиле оригинального ВАЗ-2107 -->
+ <g>
+  <!-- Левая прямоугольная фара -->
+  <rect x="37" y="384" width="61" height="31" rx="1"
+        fill="#171b20" stroke="#30363c" stroke-width="2"/>
+  <rect x="41" y="388" width="53" height="23"
+        fill="#f7f2dc"/>
+  <path d="M45 390 H90"
+        stroke="#ffffff" stroke-width="1" opacity=".25"/>
+
+  <!-- Правая прямоугольная фара -->
+  <rect x="182" y="384" width="61" height="31" rx="1"
+        fill="#171b20" stroke="#30363c" stroke-width="2"/>
+  <rect x="186" y="388" width="53" height="23"
+        fill="#f7f2dc"/>
+  <path d="M190 390 H235"
+        stroke="#ffffff" stroke-width="1" opacity=".25"/>
+
+  <!-- Поворотники по внешним краям фар -->
+  <rect x="38" y="388" width="8" height="27" rx="1"
+        fill="#e99a35" stroke="#a96a22" stroke-width="1"/>
+  <rect x="234" y="388" width="8" height="27" rx="1"
+        fill="#e99a35" stroke="#a96a22" stroke-width="1"/>
+ </g>
+
+ <!-- Номер -->
+ <rect x="119" y="416" width="42" height="12" rx="1"
+       fill="#f7f7f2" stroke="#555e65" stroke-width="1.5"/>
+ <text x="140" y="425" text-anchor="middle"
+       font-size="9" font-weight="bold" fill="#20252a">2107</text>
+
+ <!-- Чёрный прямой бампер -->
+ <rect x="30" y="428" width="220" height="12" rx="2"
+       fill="#15191d" stroke="#080a0c" stroke-width="2"/>
+ <path d="M43 432 H237" stroke="#515961" stroke-width="2"/>
+
+</g>
+<!-- Мальчик -->
+<g transform="translate(150 80) scale(.82)" filter="url(#shadow3d)">
+ <ellipse cx="201" cy="451" rx="48" ry="9" fill="#172b25" opacity=".25"/>
+
+ <!-- Ноги и руки -->
+ <path d="M178 398 Q174 425 171 449 L197 451 L204 414 L214 414 L225 451 L248 449 L237 398Z"
+       fill="url(#skin3d)"/>
+ <path d="M166 353 Q151 357 145 376 L135 407 Q132 419 144 422 Q154 423 158 410 L177 382Z"
+       fill="url(#skin3d)" stroke="#bd866b" stroke-width="3"/>
+ <path d="M231 353 Q247 357 254 376 L264 407 Q267 419 255 422 Q245 423 241 410 L220 382Z"
+       fill="url(#skin3d)" stroke="#bd866b" stroke-width="3"/>
+ <ellipse cx="143" cy="416" rx="9" ry="11" fill="url(#skin3d)"/>
+ <ellipse cx="256" cy="416" rx="9" ry="11" fill="url(#skin3d)"/>
+
+ <!-- Летний комплект -->
+ <g class="season-outfit boy-summer">
+  <path d="M174 350 Q184 342 195 342 L207 342 Q220 343 230 352
+           Q239 363 235 380 L230 408 Q203 420 174 408 L168 380
+           Q164 362 174 350Z"
+        fill="#19a7a0" stroke="#087a79" stroke-width="4"/>
+  <path d="M201 345 L190 365 L202 376 L213 365Z" fill="#fff0c5"/>
+  <path d="M178 360 Q190 369 181 383 M220 357 Q208 369 222 381
+           M180 391 Q193 383 192 400 M224 391 Q210 384 211 402"
+        fill="none" stroke="#f8d36b" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="187" cy="376" r="4" fill="#f18a63"/>
+  <circle cx="218" cy="383" r="4" fill="#f18a63"/>
+  <path d="M169 400 Q201 408 235 400 L238 442 Q204 451 166 442Z"
+        fill="#e8a64f" stroke="#b97535" stroke-width="3"/>
+  <path d="M201 408 L201 445" stroke="#fff0c5" stroke-width="3"/>
+  <path d="M176 414 Q185 420 178 432 M218 414 Q229 420 221 432"
+        fill="none" stroke="#f5d17a" stroke-width="4"/>
+  <path d="M166 444 Q181 440 198 449 L202 460 Q201 466 161 464 Q154 460 166 444Z"
+        fill="#d9b47d" stroke="#9b805c" stroke-width="3"/>
+  <path d="M214 449 Q231 440 247 445 L260 460 Q262 466 220 464 Q211 462 214 449Z"
+        fill="#d9b47d" stroke="#9b805c" stroke-width="3"/>
+  <path d="M164 459 Q180 455 198 460 M220 460 Q239 455 256 460"
+        stroke="#fff0d8" stroke-width="3" fill="none"/>
+ </g>
+
+ <!-- Зимний комплект -->
+ <g class="season-outfit boy-winter">
+  <path d="M171 399 Q201 407 237 399 L244 449 Q222 457 166 449Z"
+        fill="#171b22" stroke="#080b10" stroke-width="3"/>
+  <path d="M174 350 Q184 342 195 342 L207 342 Q220 343 230 352
+           L242 386 L230 410 Q201 420 170 410 L158 380Z"
+        fill="#171b22" stroke="#080b10" stroke-width="4"/>
+  <path d="M174 355 L164 378 L174 395 M230 355 L242 378 L230 395"
+        fill="none" stroke="#252b34" stroke-width="12" stroke-linecap="round"/>
+  <path d="M178 359 L224 359 M176 379 L226 379 M180 399 L222 399"
+        stroke="#e9b83d" stroke-width="3" fill="none"/>
+  <path d="M184 355 L193 365 L184 375 L193 385 L184 397
+           M216 355 L207 365 L216 375 L207 385 L216 397"
+        stroke="#e9b83d" stroke-width="3" fill="none"/>
+  <path d="M201 355 V407" stroke="#e9b83d" stroke-width="3"/>
+  <circle cx="201" cy="369" r="3" fill="#f7d36d"/>
+  <circle cx="201" cy="387" r="3" fill="#f7d36d"/>
+  <path d="M166 444 Q181 440 198 449 L202 460 Q201 466 161 464 Q154 460 166 444Z"
+        fill="#17191d" stroke="#08090b" stroke-width="3"/>
+  <path d="M214 449 Q231 440 247 445 L260 460 Q262 466 220 464 Q211 462 214 449Z"
+        fill="#17191d" stroke="#08090b" stroke-width="3"/>
+  <path d="M160 460 Q180 456 201 461 M218 461 Q240 456 260 460"
+        stroke="#d7c5a7" stroke-width="5" fill="none"/>
+ </g>
+
+ <!-- Весенне-осенний комплект -->
+ <g class="season-outfit boy-spring">
+  <path d="M171 399 Q201 407 237 399 L244 449 Q222 457 166 449Z"
+        fill="#17191b" stroke="#08090b" stroke-width="3"/>
+  <path d="M174 350 Q184 342 195 342 L207 342 Q220 343 230 352
+           L241 381 L230 410 Q201 420 170 410 L160 381Z"
+        fill="#81543a" stroke="#593a2c" stroke-width="4"/>
+  <path d="M174 355 L162 380 L174 397 M230 355 L242 380 L230 397"
+        fill="none" stroke="#68432f" stroke-width="12" stroke-linecap="round"/>
+  <path d="M190 347 L201 363 L212 347" fill="none" stroke="#b98a67" stroke-width="3"/>
+  <path d="M196 365 L193 386 M206 365 L209 386" stroke="#e0c1a0" stroke-width="2"/>
+  <path d="M184 390 Q201 384 218 390 L218 405 L184 405Z"
+        fill="#704832" stroke="#593a2c" stroke-width="2"/>
+  <path d="M166 444 Q181 440 198 449 L202 460 Q201 466 161 464 Q154 460 166 444Z"
+        fill="#78836a" stroke="#515d4a" stroke-width="3"/>
+  <path d="M214 449 Q231 440 247 445 L260 460 Q262 466 220 464 Q211 462 214 449Z"
+        fill="#78836a" stroke="#515d4a" stroke-width="3"/>
+  <path d="M160 460 Q180 456 201 461 M218 461 Q240 456 260 460"
+        stroke="#d6d0b9" stroke-width="5" fill="none"/>
+ </g>
+
+ <!-- Шея и голова -->
+ <path d="M187 333 L215 333 L216 355 Q201 365 186 355Z" fill="url(#skin3d)"/>
+ <ellipse cx="201" cy="306" rx="39" ry="47" fill="url(#skin3d)" stroke="#c58c6e" stroke-width="2"/>
+ <path d="M163 309 Q151 258 190 253 Q236 245 242 295
+          Q226 278 211 279 Q188 292 163 309Z" fill="#68452f"/>
+ <path d="M164 282 Q180 249 215 263" fill="none" stroke="#9a6944" stroke-width="10" stroke-linecap="round"/>
+ <ellipse cx="187" cy="307" rx="4" ry="6" fill="#342b2b"/>
+ <ellipse cx="216" cy="307" rx="4" ry="6" fill="#342b2b"/>
+ <path d="M190 329 Q201 337 212 329" fill="none" stroke="#a94d4b" stroke-width="3" stroke-linecap="round"/>
+ <path d="M180 291 Q189 285 197 290 M207 290 Q217 284 224 291" fill="none" stroke="#51372e" stroke-width="3"/>
+
+ <!-- Зимняя ушанка -->
+ <g class="season-outfit boy-winter">
+  <path d="M163 294 Q160 255 201 250 Q242 255 239 294
+           Q204 281 163 294Z" fill="#292d34" stroke="#11151b" stroke-width="3"/>
+  <path d="M164 282 Q147 282 151 307 Q157 321 174 311 L177 291Z"
+        fill="#292d34" stroke="#11151b" stroke-width="3"/>
+  <path d="M225 291 L229 311 Q246 321 251 307 Q255 282 238 282Z"
+        fill="#292d34" stroke="#11151b" stroke-width="3"/>
+  <path d="M163 292 Q201 280 239 292" stroke="#b9b8b1" stroke-width="5" fill="none"/>
+ </g>
+</g>
+<!-- Девочка -->
+<g transform="translate(104 100) scale(.82)" filter="url(#shadow3d)">
+ <ellipse cx="690" cy="451" rx="48" ry="9" fill="#172b25" opacity=".25"/>
+
+ <!-- Ноги и руки -->
+ <path d="M661 407 Q657 424 656 444 L654 452 Q671 459 685 451 L690 416 L696 416 L704 451 Q722 459 738 451 L730 405Z"
+       fill="url(#skin3d)"/>
+ <path d="M655 353 Q640 358 634 377 L625 407 Q622 419 634 422 Q644 423 648 410 L666 382Z"
+       fill="url(#skin3d)" stroke="#bd866b" stroke-width="3"/>
+ <path d="M725 353 Q740 358 746 377 L755 407 Q758 419 746 422 Q736 423 732 410 L714 382Z"
+       fill="url(#skin3d)" stroke="#bd866b" stroke-width="3"/>
+ <ellipse cx="633" cy="416" rx="9" ry="11" fill="url(#skin3d)"/>
+ <ellipse cx="747" cy="416" rx="9" ry="11" fill="url(#skin3d)"/>
+
+ <!-- Летнее платье -->
+ <g class="season-outfit girl-summer">
+  <path d="M674 342 Q690 337 706 342 Q724 346 731 360
+           L737 407 Q716 425 690 425 Q664 425 643 407
+           L649 360 Q656 346 674 342Z"
+        fill="#d92739" stroke="#9e1728" stroke-width="4"/>
+  <path d="M658 365 Q690 379 722 365" fill="none" stroke="#ff9aa2" stroke-width="4"/>
+  <g fill="#fff">
+   <circle cx="665" cy="376" r="3.5"/><circle cx="686" cy="370" r="3.5"/>
+   <circle cx="710" cy="377" r="3.5"/><circle cx="675" cy="393" r="3.5"/>
+   <circle cx="699" cy="393" r="3.5"/><circle cx="721" cy="400" r="3.5"/>
+   <circle cx="657" cy="402" r="3.5"/><circle cx="686" cy="411" r="3.5"/>
+   <circle cx="709" cy="414" r="3.5"/>
+  </g>
+  <path d="M654 445 Q671 440 686 450 L690 461 Q689 466 649 464 Q642 460 654 445Z"
+        fill="#fff" stroke="#cfd5dc" stroke-width="3"/>
+  <path d="M706 450 Q724 440 739 445 L752 460 Q754 466 712 464 Q703 462 706 450Z"
+        fill="#fff" stroke="#cfd5dc" stroke-width="3"/>
+  <path d="M651 459 Q670 455 686 460 M713 460 Q731 455 748 460"
+        stroke="#b7c6d2" stroke-width="3" fill="none"/>
+ </g>
+
+ <!-- Зимний комплект -->
+ <g class="season-outfit girl-winter">
+  <path d="M661 407 Q690 416 730 405 L738 450 Q713 458 654 450Z"
+        fill="#17191e" stroke="#080a0e" stroke-width="3"/>
+  <path d="M674 342 Q690 337 706 342 Q724 346 731 360
+           L742 392 L729 414 Q690 425 651 414 L638 390
+           L649 360 Q656 346 674 342Z"
+        fill="#17191e" stroke="#080a0e" stroke-width="4"/>
+  <path d="M650 355 L640 382 L655 399 M730 355 L742 382 L726 399"
+        fill="none" stroke="#252a32" stroke-width="12" stroke-linecap="round"/>
+  <path d="M690 351 V413" stroke="#555b64" stroke-width="3"/>
+  <path d="M674 385 Q690 378 706 385 L706 402 L674 402Z"
+        fill="#242932" stroke="#080a0e" stroke-width="2"/>
+  <path d="M654 445 Q671 440 686 450 L690 461 Q689 466 649 464 Q642 460 654 445Z"
+        fill="#17191e" stroke="#080a0e" stroke-width="3"/>
+  <path d="M706 450 Q724 440 739 445 L752 460 Q754 466 712 464 Q703 462 706 450Z"
+        fill="#17191e" stroke="#080a0e" stroke-width="3"/>
+  <path d="M649 460 Q670 456 690 461 M709 461 Q731 456 752 460"
+        stroke="#c3b9a9" stroke-width="4" fill="none"/>
+  <!-- Молнии сапог -->
+  <path d="M680 447 L680 460 M730 447 L730 460"
+        stroke="#b9b9b9" stroke-width="2"/>
+ </g>
+
+ <!-- Весенне-осенний комплект -->
+ <g class="season-outfit girl-spring">
+  <path d="M661 407 Q690 416 730 405 L738 450 Q713 458 654 450Z"
+        fill="#17191e" stroke="#080a0e" stroke-width="3"/>
+  <path d="M674 342 Q690 337 706 342 Q724 346 731 360
+           L742 392 L729 414 Q690 425 651 414 L638 390
+           L649 360 Q656 346 674 342Z"
+        fill="#d9363d" stroke="#a9222d" stroke-width="4"/>
+  <path d="M650 355 L640 382 L655 399 M730 355 L742 382 L726 399"
+        fill="none" stroke="#bd2d36" stroke-width="12" stroke-linecap="round"/>
+  <path d="M680 348 L690 363 L700 348" fill="none" stroke="#f4a3a3" stroke-width="3"/>
+  <path d="M684 365 L681 383 M696 365 L699 383"
+        stroke="#f4c4bd" stroke-width="2"/>
+  <path d="M654 445 Q671 440 686 450 L690 461 Q689 466 649 464 Q642 460 654 445Z"
+        fill="#17191e" stroke="#080a0e" stroke-width="3"/>
+  <path d="M706 450 Q724 440 739 445 L752 460 Q754 466 712 464 Q703 462 706 450Z"
+        fill="#17191e" stroke="#080a0e" stroke-width="3"/>
+  <path d="M649 460 Q670 456 690 461 M709 461 Q731 456 752 460"
+        stroke="#e5e0d7" stroke-width="4" fill="none"/>
+ </g>
+
+ <!-- Шея и волосы -->
+ <path d="M677 333 L703 333 L704 355 Q690 365 676 355Z" fill="url(#skin3d)"/>
+ <path d="M651 300 Q646 264 681 252 Q730 247 738 295
+          L738 351 Q733 370 723 369 L724 309Z" fill="#75452f"/>
+ <path d="M656 291 Q642 337 661 360" fill="none" stroke="#75452f" stroke-width="12" stroke-linecap="round"/>
+
+ <!-- Голова и лицо -->
+ <ellipse cx="690" cy="306" rx="39" ry="47" fill="url(#skin3d)" stroke="#c58c6e" stroke-width="2"/>
+ <path d="M652 306 Q640 264 680 253 Q727 247 729 306
+          Q715 284 703 279 Q678 295 652 306Z" fill="#75452f"/>
+ <circle cx="676" cy="307" r="4" fill="#342b2b"/>
+ <circle cx="705" cy="307" r="4" fill="#342b2b"/>
+ <path d="M679 329 Q690 337 702 329" fill="none" stroke="#ad5555" stroke-width="3" stroke-linecap="round"/>
+ <path d="M665 290 Q675 284 683 290 M698 290 Q709 284 717 291" stroke="#65402f" stroke-width="3" fill="none"/>
+ <path d="M728 275 Q744 263 753 280 Q746 296 730 290Z" fill="#ff8cae"/>
+
+ <!-- Зимняя красная шапка -->
+ <g class="season-outfit girl-winter">
+  <path d="M650 295 Q650 257 690 252 Q731 257 731 295
+           Q690 285 650 295Z" fill="#d52b36" stroke="#991d29" stroke-width="3"/>
+  <path d="M650 292 Q690 283 731 292" fill="none" stroke="#f28b8f" stroke-width="7"/>
+  <circle cx="690" cy="253" r="7" fill="#f4dce0"/>
+ </g>
+
+ <!-- Весенне-осенняя сиреневая шапка -->
+ <g class="season-outfit girl-spring">
+  <path d="M650 295 Q650 257 690 252 Q731 257 731 295
+           Q690 285 650 295Z" fill="#a78bd4" stroke="#7962aa" stroke-width="3"/>
+  <path d="M650 292 Q690 283 731 292" fill="none" stroke="#d8c6f2" stroke-width="7"/>
+  <circle cx="690" cy="253" r="7" fill="#e6dafa"/>
+ </g>
+</g>
+<!-- Бело-рыжий корги -->
+<g class="px-ground-hole" transform="translate(51 57)">
+  <!-- Единое земляное углубление -->
+  <ellipse cx="640" cy="495" rx="29" ry="7" fill="#493023" opacity=".95"/>
+  <path d="M610 494 Q616 485 629 488 Q641 480 653 488 Q666 485 670 494 Q657 502 640 501 Q622 502 610 494Z"
+        fill="#98643b" stroke="#694329" stroke-width="2.5"/>
+  <path d="M615 493 Q627 488 640 492 Q653 496 665 492"
+        fill="none" stroke="#c18b55" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Косточка, частично погружённая в землю -->
+  <path d="M626 486
+           C620 481 614 484 615 490
+           C616 495 621 497 625 493
+           L650 503
+           C649 509 655 512 660 508
+           C664 504 660 499 655 499
+           L630 489
+           C630 486 628 484 626 486Z"
+        fill="#c18b55" stroke="#694329" stroke-width="2.5"
+        stroke-linejoin="round"/>
+  <path d="M630 489 L650 501"
+        fill="none" stroke="#e0b47a" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Земляные комочки -->
+  <ellipse cx="672" cy="493" rx="9" ry="3" fill="#98643b"/>
+  <circle cx="667" cy="490" r="2.5" fill="#b17b49"/>
+  <circle cx="676" cy="489" r="2" fill="#805332"/>
+  <circle cx="611" cy="497" r="2" fill="#b17b49"/>
+
+  <g class="px-hole-fx">
+    <circle class="px-hole-clod clod1" cx="620" cy="482" r="3.5" fill="#98643b"/>
+    <circle class="px-hole-clod clod2" cx="651" cy="480" r="3" fill="#b17b49"/>
+    <ellipse class="px-hole-clod clod3" cx="665" cy="488" rx="4" ry="2.5" fill="#805332"/>
+    <circle class="px-hole-clod clod4" cx="633" cy="478" r="2.5" fill="#c18b55"/>
+
+    <g class="px-hole-dust">
+      <ellipse cx="615" cy="480" rx="8" ry="4" fill="#c9a078"/>
+      <ellipse cx="642" cy="475" rx="11" ry="5" fill="#d8b58c"/>
+      <ellipse cx="661" cy="480" rx="7" ry="4" fill="#c9a078"/>
+    </g>
+  </g>
+</g>
+
+<g id="projectx-dog" transform="translate(0 130) scale(.85)" filter="url(#shadow3d)">
+ <g transform="translate(1600 0) scale(-1 1)">
+ <ellipse cx="798" cy="431" rx="55" ry="8" fill="#172b25" opacity=".25"/>
+
+ <!-- Хвост -->
+ <path d="M754 378 Q728 362 735 343 Q742 330 758 345 Q770 355 766 371"
+       fill="none" stroke="#fff" stroke-width="15" stroke-linecap="round"/>
+ <path d="M737 345 Q741 334 752 343 Q760 350 762 357"
+       fill="none" stroke="#c98250" stroke-width="10" stroke-linecap="round"/>
+
+ <!-- Вытянутое тело -->
+ <path d="M758 365 Q778 347 815 357 Q844 365 850 390
+          Q850 413 827 420 L769 417 Q746 409 748 389Z"
+       fill="#fff" stroke="#d9dfe5" stroke-width="2"/>
+
+ <!-- Два рыжих пятна на спине -->
+ <path d="M772 359 Q783 347 797 358 Q805 368 793 377
+          Q779 382 770 371Z" fill="#c98250"/>
+ <path d="M814 359 Q830 355 839 371 Q843 383 828 386
+          Q813 383 808 372Z" fill="#c98250"/>
+
+ <!-- Ямка и рыхлая земля перед лапой -->
+
+
+ <!-- Короткие лапы -->
+ <path d="M762 400 Q758 416 759 431 Q759 438 778 438
+          Q785 436 782 426 L785 405Z"
+       fill="#fff" stroke="#d9dfe5" stroke-width="2"/>
+ <path d="M802 409 L801 431 Q800 438 819 438
+          Q826 436 822 426 L824 407Z"
+       fill="#fff" stroke="#d9dfe5" stroke-width="2"/>
+
+
+ <!-- Рыжие отметины на лапах -->
+ <path d="M760 426 Q769 419 780 426 L780 435
+          Q770 440 760 435Z" fill="#c98250"/>
+ <path d="M802 426 Q812 420 822 427 L822 435
+          Q812 440 802 435Z" fill="#c98250"/>
+ <g class="px-dog-front-paw">
+  <path d="M835 403 L838 430 Q839 438 856 436
+           Q862 433 855 421 L851 395Z"
+        fill="#fff" stroke="#d9dfe5" stroke-width="2"/>
+  <path d="M839 423 Q847 418 856 425 L857 434
+           Q847 439 840 434Z" fill="#c98250"/>
+ </g>
+
+ <g class="px-dog-head">
+ <!-- Голова -->
+ <path d="M813 350 L807 321 Q805 301 824 309
+          L839 331Z" fill="#fff" stroke="#d9dfe5" stroke-width="2"/>
+ <path d="M847 330 L860 307 Q879 298 877 322
+          L866 350Z" fill="#fff" stroke="#d9dfe5" stroke-width="2"/>
+ <path d="M813 319 Q813 310 824 315 L832 335Z" fill="#e5b49a"/>
+ <path d="M856 321 Q867 310 871 317 L864 339Z" fill="#e5b49a"/>
+
+ <ellipse cx="840" cy="356" rx="36" ry="34"
+          fill="#fff" stroke="#d9dfe5" stroke-width="2"/>
+
+ <!-- Рыжее пятнышко на лбу -->
+ <path d="M828 326 Q839 317 849 328
+          Q853 337 842 342 Q830 341 828 326Z"
+       fill="#c98250"/>
+
+ <!-- Глаза и мордочка -->
+ <circle cx="827" cy="354" r="3.5" fill="#342b2b"/>
+ <circle cx="851" cy="354" r="3.5" fill="#342b2b"/>
+ <ellipse cx="840" cy="369" rx="17" ry="12" fill="#fff"/>
+ <ellipse cx="840" cy="365" rx="6" ry="4.5" fill="#29252a"/>
+ <path d="M840 370 Q834 379 827 373 M840 370 Q846 379 853 373"
+       fill="none" stroke="#8b5d52" stroke-width="2.5"
+       stroke-linecap="round"/>
+
+ <g class="px-dog-bone">
+   <rect x="819" y="376" width="42" height="7" rx="3.5"
+         fill="#f3dfb2" stroke="#9b7048" stroke-width="1.5"/>
+   <circle cx="818" cy="379.5" r="5.5"
+           fill="#f3dfb2" stroke="#9b7048" stroke-width="1.5"/>
+   <circle cx="862" cy="379.5" r="5.5"
+           fill="#f3dfb2" stroke="#9b7048" stroke-width="1.5"/>
+ </g>
+ </g>
+ </g>
+<g class="px-ground-dirt">
+  <circle class="px-clod-a" cx="640" cy="487" r="3.2" fill="#9a6840"/>
+  <circle class="px-clod-b" cx="644" cy="486" r="2.8" fill="#b17b49"/>
+  <circle class="px-clod-c" cx="637" cy="486" r="3" fill="#805332"/>
+  <circle class="px-clod-d" cx="646" cy="489" r="2.3" fill="#c18b55"/>
+</g>
+</g>
+</svg>
+
+
+<div class="weather-effect" id="effect"></div>
+</div>
+<div class="modes">
+<button class="mode active" data-mode="sun">☀️ Солнечно</button>
+<button class="mode" data-mode="cloud">☁️ Облачно</button>
+<button class="mode" data-mode="rain">🌧️ Дождь</button>
+<button class="mode" data-mode="snow">❄️ Снег</button>
+<button class="mode" data-mode="wind">🍃 Ветер</button>
+<button class="mode" data-mode="fog">🌫️ Туман</button>
+</div>
+</section>
+<div class="right-column"><aside class="panel">
+<div class="subtitle">СЕЙЧАС В ЖИТИКАРЕ</div>
+<div class="temp" id="temperature">+18°</div>
+<div class="condition" id="condition">☀️ Ясно и тепло</div>
+<div class="details">
+<div class="detail">🌡️ Ощущается как<b id="feels">+17°</b></div>
+<div class="detail">💧 Влажность<b id="humidity">45%</b></div>
+<div class="detail">💨 Ветер<b id="wind">3 м/с</b></div>
+<div class="detail">🌧️ Осадки<b id="rain">0 мм</b></div>
+</div>
+<p id="weatherStatus" style="margin-top:22px;color:#a4b7d0;font-size:13px">Загрузка реальной погоды...</p>
+</aside><div class="tree-tools" id="treeTools">
+ <h2>🌳 Мой сад</h2>
+ <div class="tree-tabs">
+  <button class="tree-tab active" data-action="tab" data-value="trees">🌲 Деревья</button>
+  <button class="tree-tab" data-action="tab" data-value="decor">✨ Украшения</button>
+ </div>
+ <div id="treeControls"></div>
+ <div class="tree-status" id="treeStatus" aria-live="polite">Выбрана ель</div>
+</div></div>
+</main>
+<div class="wardrobe-overlay" id="wardrobeOverlay" aria-hidden="true">
+ <div class="wardrobe-window" role="dialog" aria-modal="true" aria-label="Гардероб персонажей">
+  <div class="wardrobe-head">
+   <h2>👕 Гардероб ProjectX</h2>
+   <button class="wardrobe-close" id="closeWardrobe">✕</button>
+  </div>
+  <p>Выбери персонажа и примерь любой сезонный комплект.</p>
+
+  <div class="wardrobe-person">
+   <h3>👧 Девочка</h3>
+   <div class="wardrobe-actions">
+    <button data-character="girl" data-season="summer">☀️ Лето</button>
+    <button data-character="girl" data-season="winter">❄️ Зима</button>
+    <button data-character="girl" data-season="spring">🌷 Весна / осень</button>
+   </div>
+  </div>
+
+  <div class="wardrobe-person">
+   <h3>👦 Мальчик</h3>
+   <div class="wardrobe-actions">
+    <button data-character="boy" data-season="summer">☀️ Лето</button>
+    <button data-character="boy" data-season="winter">❄️ Зима</button>
+    <button data-character="boy" data-season="spring">🌷 Весна / осень</button>
+   </div>
+  </div>
+
+  <div class="wardrobe-status" id="wardrobeStatus">
+   Выбранные наряды отображаются прямо на персонажах.
+  </div>
+  <button class="wardrobe-auto" id="wardrobeAuto">↩ Вернуть сезонную одежду</button>
+ </div>
+</div>
+<footer>ProjectX Weather · Сказочная погода для Житикары</footer>
+</div>
+<script>
+const modes={
+sun:{name:"☀️ Солнечно",icon:"☀️",temp:"+18°",feels:"+17°",humidity:"45%",wind:"3 м/с",rain:"0 мм",effect:""},
+cloud:{name:"☁️ Облачно",icon:"☁️",temp:"+12°",feels:"+10°",humidity:"60%",wind:"4 м/с",rain:"0 мм",effect:""},
+rain:{name:"🌧️ Идёт дождь",icon:"🌧️",temp:"+9°",feels:"+7°",humidity:"88%",wind:"5 м/с",rain:"3 мм",effect:"💧"},
+snow:{name:"❄️ Идёт снег",icon:"❄️",temp:"−8°",feels:"−13°",humidity:"80%",wind:"6 м/с",rain:"Снег",effect:"❄️"},
+wind:{name:"🍃 Ветрено",icon:"🍃",temp:"+7°",feels:"+3°",humidity:"55%",wind:"12 м/с",rain:"0 мм",effect:"🍃"},
+fog:{name:"🌫️ Туман",icon:"🌫️",temp:"+4°",feels:"+2°",humidity:"98%",wind:"1 м/с",rain:"0 мм",effect:""}
+};
+function setWeather(mode, winter = [12,1,2].includes(new Date().getMonth()+1), blizzard = false){
+const w=modes[mode];
+document.getElementById("scene").dataset.weather=mode;
+const dog = document.getElementById('projectx-dog');
+if (dog) {
+ if (mode === "fog") {
+  dog.dataset.weather = "";
+  const sceneRect = document.getElementById("scene").getBoundingClientRect();
+  const dogRect = dog.getBoundingClientRect();
+  const travel = Math.max(0, dogRect.left - sceneRect.left - 12);
+  dog.style.setProperty("--px-dog-fog-travel", travel + "px");
+ }
+ dog.dataset.weather = blizzard ? 'blizzard' : mode;
+}
+document.getElementById("sun").style.display=mode==="sun"?"block":"none";
+
+const effect=document.getElementById("effect");
+effect.innerHTML="";
+effect.className="weather-effect"+(blizzard?" blizzard":"")+(mode==="fog"?" fog":"");
+
+if(mode==="fog"){
+ for(let i=0;i<5;i++){
+  const layer=document.createElement("span");
+  layer.className="fog-layer";
+  layer.style.top=(42+i*12)+"%";
+  layer.style.animationDelay=(i*-3)+"s";
+  layer.style.animationDuration=(15+i*3)+"s";
+  layer.style.opacity=(0.35+Math.random()*0.3).toFixed(2);
+  effect.appendChild(layer);
+ }
+}
+
+let symbol=w.effect;
+
+// Зимой листья отключены
+if(mode==="wind" && winter){
+symbol="";
+}
+
+if(blizzard){
+symbol="❄️";
+}
+
+if(symbol){
+for(let i=0;i<(blizzard?25:(mode==="rain"?14:(mode==="snow"?12:28)));i++){
+const drop=document.createElement("span");
+drop.textContent=symbol;
+drop.style.left=(Math.random()*100)+"%";
+
+if(blizzard){
+drop.style.animationDelay=(Math.random()*1.5)+"s";
+drop.style.animationDuration=(0.7+Math.random()*0.8)+"s";
+drop.style.fontSize=(18+Math.random()*16)+"px";
+}else{
+drop.style.animationDelay=(Math.random()*4)+"s";
+drop.style.animationDuration=(2+Math.random()*3)+"s";
+}
+
+effect.appendChild(drop);
+}
+}
+
+document.querySelectorAll(".mode").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
+}
+document.querySelectorAll(".mode").forEach(b=>b.addEventListener("click",()=>setWeather(b.dataset.mode)));
+
+function setChimneySmoke(active) {
+ const smoke = document.getElementById("chimneySmoke");
+ if (smoke) smoke.classList.toggle("active", active);
+}
+
+async function loadRealWeather() {
+ const status = document.getElementById("weatherStatus");
+
+ try {
+  status.textContent = "Получаем актуальную погоду для Житикары...";
+
+  const place = { latitude: 52.19019, longitude: 61.19894 };
+
+  const params = new URLSearchParams({
+   latitude: place.latitude,
+   longitude: place.longitude,
+   current: [
+    "temperature_2m",
+    "relative_humidity_2m",
+    "apparent_temperature",
+    "precipitation",
+    "weather_code",
+    "wind_speed_10m"
+   ].join(","),
+   wind_speed_unit: "ms",
+   timezone: "auto"
+  });
+
+  const response = await fetch(
+   "https://api.open-meteo.com/v1/forecast?" + params
+  );
+
+  if (!response.ok) throw new Error("Погодный сервис недоступен");
+
+  const data = await response.json();
+  const w = data.current;
+
+  if (!w || w.temperature_2m == null) {
+   throw new Error("Нет данных о текущей погоде");
+  }
+
+  const formatTemp = value => {
+   const n = Math.round(value);
+   return (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n) + "°";
+  };
+
+  const code = w.weather_code;
+
+  let condition = "☀️ Ясно";
+  if (code === 1) condition = "🌤️ Преимущественно ясно";
+  else if (code === 2) condition = "⛅ Переменная облачность";
+  else if (code === 3) condition = "☁️ Пасмурно";
+  else if ([45, 48].includes(code)) condition = "🌫️ Туман";
+  else if ([51, 53, 55, 56, 57].includes(code)) condition = "🌦️ Морось";
+  else if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) condition = "🌧️ Дождь";
+  else if ([71, 73, 75, 77, 85, 86].includes(code)) condition = "❄️ Снег";
+  else if ([95, 96, 99].includes(code)) condition = "⛈️ Гроза";
+
+  document.getElementById("temperature").textContent =
+   formatTemp(w.temperature_2m);
+
+  setChimneySmoke(Number(w.temperature_2m) < 10);
+
+  document.getElementById("feels").textContent =
+   formatTemp(w.apparent_temperature);
+
+  document.getElementById("humidity").textContent =
+   Math.round(w.relative_humidity_2m) + "%";
+
+  document.getElementById("wind").textContent =
+   Number(w.wind_speed_10m).toFixed(1).replace(".", ",") + " м/с";
+
+  document.getElementById("rain").textContent =
+   Number(w.precipitation).toFixed(1).replace(".", ",") + " мм";
+
+  document.getElementById("condition").textContent = condition;
+
+  // Автоматическая погодная анимация
+  const weatherMonth = Number((w.time || "").slice(5, 7)) || new Date().getMonth()+1;
+  const winter = [12, 1, 2].includes(weatherMonth);
+
+  const snowCodes = [71, 73, 75, 77, 85, 86];
+  const rainCodes = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99];
+
+  let visualMode = "sun";
+
+  if ([45, 48].includes(code)) {
+   visualMode = "fog";
+  } else if (snowCodes.includes(code)) {
+   visualMode = "snow";
+  } else if (rainCodes.includes(code)) {
+   visualMode = "rain";
+  } else if ([2, 3].includes(code)) {
+   visualMode = "cloud";
+  }
+
+  const strongWind = Number(w.wind_speed_10m) >= 8;
+  const isBlizzard = winter && snowCodes.includes(code) && strongWind;
+
+  if (strongWind && !snowCodes.includes(code) && !rainCodes.includes(code) && ![45, 48].includes(code)) {
+   visualMode = "wind";
+  }
+
+  setWeather(visualMode, winter, isBlizzard);
+
+  const updateTime = w.time ? w.time.slice(11, 16) : "";
+
+  status.textContent =
+   "Актуальные данные Open-Meteo · Обновлено: " + updateTime;
+
+ } catch (error) {
+  console.error("ProjectX Weather:", error);
+  status.textContent =
+   "Не удалось получить погоду. Проверь подключение к интернету.";
+ }
+}
+
+let themeMode = "auto";
+// Гардероб: отдельная примерка для каждого персонажа
+const wardrobePreview = { boy: null, girl: null };
+
+function openWardrobe() {
+ const overlay = document.getElementById("wardrobeOverlay");
+ overlay.classList.add("open");
+ overlay.setAttribute("aria-hidden", "false");
+}
+
+function closeWardrobe() {
+ const overlay = document.getElementById("wardrobeOverlay");
+ overlay.classList.remove("open");
+ overlay.setAttribute("aria-hidden", "true");
+}
+
+document.getElementById("wardrobeButton").addEventListener("click", openWardrobe);
+document.getElementById("closeWardrobe").addEventListener("click", closeWardrobe);
+
+document.getElementById("wardrobeOverlay").addEventListener("click", event => {
+ if (event.target.id === "wardrobeOverlay") closeWardrobe();
+});
+
+document.querySelectorAll("[data-character][data-season]").forEach(button => {
+ button.addEventListener("click", () => {
+  const character = button.dataset.character;
+  const season = button.dataset.season;
+
+  wardrobePreview[character] = season;
+  applyProjectSeason();
+
+  document.querySelectorAll('[data-character="' + character + '"]').forEach(item => {
+   item.classList.toggle("active", item === button);
+  });
+
+  document.getElementById("wardrobeStatus").textContent =
+   (character === "girl" ? "Девочка" : "Мальчик") +
+   ": выбран " +
+   (season === "summer" ? "летний" : season === "winter" ? "зимний" : "весенне-осенний") +
+   " наряд.";
+ });
+});
+
+document.getElementById("wardrobeAuto").addEventListener("click", () => {
+ wardrobePreview.boy = null;
+ wardrobePreview.girl = null;
+
+ document.querySelectorAll("[data-character][data-season]").forEach(button => {
+  button.classList.remove("active");
+ });
+
+ applyProjectSeason();
+ document.getElementById("wardrobeStatus").textContent =
+  "Автоматическая сезонная одежда включена.";
+});
+
+document.addEventListener("keydown", event => {
+ if (event.key === "Escape") closeWardrobe();
+});
+
+function getProjectSeason() {
+ const month = new Date().getMonth() + 1;
+ if (month === 12 || month <= 2) return "winter";
+ if (month >= 6 && month <= 8) return "summer";
+ return "spring";
+}
+
+function applyProjectSeason() {
+ const season = getProjectSeason();
+
+ document.querySelectorAll(".season-outfit").forEach(el => {
+  const isBoy = el.classList.contains("boy-summer") ||
+                el.classList.contains("boy-winter") ||
+                el.classList.contains("boy-spring");
+
+  const character = isBoy ? "boy" : "girl";
+  const selectedSeason = wardrobePreview[character] || season;
+  const targetClass = character + "-" + selectedSeason;
+
+  el.classList.toggle("active", el.classList.contains(targetClass));
+ });
+}
+function applyTheme(mode) {
+ const hour = new Date().getHours();
+ const actualTheme = mode === "auto"
+  ? (hour >= 7 && hour < 19 ? "day" : "night")
+  : mode;
+
+ const scene = document.getElementById("scene");
+ scene.classList.remove("day","night");
+ scene.classList.add(actualTheme);
+
+ const button = document.getElementById("themeButton");
+ if (button) {
+  button.textContent =
+   mode === "auto" ? "🕒 Авто" :
+   mode === "day" ? "☀️ День" : "🌙 Ночь";
+ }
+}
+
+document.getElementById("themeButton").addEventListener("click", () => {
+ themeMode = themeMode === "auto" ? "day" :
+             themeMode === "day" ? "night" : "auto";
+ applyTheme(themeMode);
+});
+
+applyProjectSeason();
+applyTheme("auto");
+setInterval(() => {
+ if (themeMode === "auto") applyProjectSeason();
+applyTheme("auto");
+}, 60000);
+
+setWeather("sun");
+loadRealWeather();
+setInterval(loadRealWeather, 15 * 60 * 1000);
+</script>
+
+<script>
+// PROJECTX_TREE_MODULE
+(function() {
+"use strict";
+
+const slot = document.getElementById("treeSlot");
+const root = document.getElementById("treeControls");
+const status = document.getElementById("treeStatus");
+
+if (!slot || !root || !status) return;
+
+const state = {
+ tree:"spruce",
+ tab:"trees",
+ apple:"bloom",
+ decor:{
+  spruce:{lights:false, ornaments:false, star:false, gifts:false},
+  maple:{bats:false, web:false, lanterns:false, pumpkins:false},
+  apple:{fallen:false}
+ }
+};
+
+function spruce(d) {
+ let toys = "";
+ if (d.ornaments) {
+  const balls = [
+   [735,260,"#e94f57"],[785,290,"#f5c94b"],
+   [820,335,"#4ca9df"],[760,350,"#d85eaa"],
+   [700,320,"#f4c84d"],[800,235,"#e65a50"]
+  ];
+  toys = balls.map(p =>
+   `<circle cx="${p[0]}" cy="${p[1]}" r="8" fill="${p[2]}" stroke="#fff4d5" stroke-width="2"/>
+    <path d="M${p[0]} ${p[1]-8}v-5" stroke="#d6c18a" stroke-width="2"/>`
+  ).join("");
+ }
+
+ const lights = d.lights ? `
+  <path d="M697 255 Q755 285 829 257 M690 310 Q760 345 840 306 M713 365 Q770 390 821 355"
+   fill="none" stroke="#f6d66d" stroke-width="3" stroke-linecap="round"/>
+  <g>
+   <circle cx="710" cy="263" r="5" fill="#ffdf54"/>
+   <circle cx="741" cy="277" r="5" fill="#ff6c86"/>
+   <circle cx="778" cy="281" r="5" fill="#79dcff"/>
+   <circle cx="814" cy="267" r="5" fill="#ffdf54"/>
+   <circle cx="714" cy="316" r="5" fill="#8de4a5"/>
+   <circle cx="755" cy="333" r="5" fill="#ffdf54"/>
+   <circle cx="802" cy="330" r="5" fill="#ff6c86"/>
+   <circle cx="829" cy="312" r="5" fill="#79dcff"/>
+   <circle cx="742" cy="370" r="5" fill="#ff6c86"/>
+   <circle cx="784" cy="378" r="5" fill="#ffdf54"/>
+  </g>` : "";
+
+ const star = d.star ? `
+  <path d="M770 126 L780 151 L807 153 L786 171 L792 197 L770 183 L748 197 L754 171 L733 153 L760 151Z"
+   fill="#ffd75b" stroke="#fff1a5" stroke-width="3" filter="url(#shadow3d)"/>
+  <circle cx="770" cy="162" r="4" fill="#fff9d7"/>` : "";
+
+ const gifts = d.gifts ? `
+  <g stroke="#f8e8d0" stroke-width="3">
+   <rect x="683" y="399" width="48" height="34" rx="3" fill="#d94e58"/>
+   <path d="M707 399v34 M683 411h48" stroke="#f6d66d" stroke-width="5"/>
+   <path d="M707 399 C690 382 686 395 707 401 C728 383 725 397 707 401" fill="#f6d66d"/>
+   <rect x="742" y="408" width="53" height="27" rx="3" fill="#397eb3"/>
+   <path d="M768 408v27 M742 418h53" stroke="#f5c94b" stroke-width="5"/>
+   <rect x="812" y="400" width="37" height="34" rx="3" fill="#4b9b68"/>
+   <path d="M830 400v34 M812 413h37" stroke="#f4e5c7" stroke-width="4"/>
+  </g>` : "";
+
+ return `
+ <ellipse cx="770" cy="433" rx="105" ry="13" fill="#203b2d" opacity=".25"/>
+ <path d="M755 345 L750 426 Q770 439 790 426 L785 345Z" fill="#805034" stroke="#593b2a" stroke-width="4"/>
+ <path d="M770 375 L770 420" stroke="#b77b4e" stroke-width="5"/>
+ <path d="M770 145 L690 270 L730 260 L670 345 L725 330 L690 400
+          Q770 420 850 400 L815 330 L870 345 L810 260 L850 270Z"
+       fill="#176b46" stroke="#0c5037" stroke-width="5" stroke-linejoin="round"/>
+ <path d="M770 155 L733 270 L756 260 L715 340 L755 325 L730 390
+          Q770 405 810 390 L785 325 L825 340 L784 260 L807 270Z"
+       fill="#258858" opacity=".8"/>
+ <path d="M770 180 L770 390" stroke="#65b77b" stroke-width="3" opacity=".55"/>
+ ${star}${lights}${toys}${gifts}
+ `;
+}
+
+function maple(d) {
+ const bats = d.bats ? `
+  <g fill="#171c2c" stroke="#080d17" stroke-width="2">
+   <path d="M706 205 Q715 190 726 204 L738 192 L741 211 L730 218 L722 211 L711 218Z"/>
+   <path d="M811 235 Q820 220 831 234 L843 222 L846 241 L835 248 L827 241 L816 248Z"/>
+   <path d="M764 180 Q773 165 784 179 L796 167 L799 186 L788 193 L780 186 L769 193Z"/>
+  </g>` : "";
+
+ const web = d.web ? `
+  <g fill="none" stroke="#d8d6df" stroke-width="2" opacity=".9">
+   <path d="M700 175 L760 250 L830 175 M700 175 L830 175 M700 175 L830 250 M700 175 L760 175"/>
+   <path d="M715 190 Q760 210 815 190 M730 210 Q760 225 800 210 M745 230 Q760 239 785 230"/>
+   <path d="M830 175 L810 220 L850 220"/>
+  </g>` : "";
+
+ const lanterns = d.lanterns ? `
+  <g stroke="#5a2d1d" stroke-width="3">
+   <path d="M700 270v35 M840 265v38" fill="none"/>
+   <path d="M690 305 Q700 292 710 305 L706 326 Q700 332 694 326Z" fill="#ff9a36"/>
+   <path d="M830 303 Q840 290 850 303 L846 325 Q840 331 834 325Z" fill="#ff9a36"/>
+   <path d="M696 311l8 0 M836 309h8" stroke="#ffe5a0"/>
+  </g>` : "";
+
+ const pumpkins = d.pumpkins ? `
+  <g stroke="#743b22" stroke-width="3">
+   <path d="M688 412 Q677 390 696 386 Q711 378 721 397 Q735 378 748 393 Q762 412 743 431 Q712 442 688 412Z" fill="#f18a32"/>
+   <path d="M704 389 Q704 406 708 430 M723 390 Q717 410 725 432" fill="none" stroke="#d46b27" stroke-width="3"/>
+   <path d="M714 388q-3-12 8-15" fill="none" stroke="#4c7439" stroke-width="5"/>
+   <path d="M700 405l8 7 8-7 6 8 8-8 7 9" fill="none" stroke="#ffe9a9" stroke-width="3"/>
+   <path d="M790 416 Q781 399 797 391 Q814 381 824 399 Q840 388 849 404 Q859 423 840 435 Q812 443 790 416Z" fill="#f18a32"/>
+   <path d="M813 394 Q810 415 816 434 M830 395 Q824 416 833 434" fill="none" stroke="#d46b27" stroke-width="3"/>
+   <path d="M817 393q-3-12 8-15" fill="none" stroke="#4c7439" stroke-width="5"/>
+   <path d="M801 410l8 7 8-7 6 8 8-8 7 9" fill="none" stroke="#ffe9a9" stroke-width="3"/>
+  </g>` : "";
+
+ return `
+ <ellipse cx="770" cy="432" rx="110" ry="12" fill="#17251f" opacity=".25"/>
+ <path d="M765 425 Q775 360 761 300 Q754 260 770 215 Q782 265 779 306 Q790 360 785 425Z"
+  fill="#60402d" stroke="#3d2b23" stroke-width="5"/>
+ <g fill="none" stroke="#60402d" stroke-width="13" stroke-linecap="round">
+  <path d="M770 320 Q720 280 706 225 Q695 195 682 185"/>
+  <path d="M770 295 Q812 265 825 220 Q837 190 855 180"/>
+  <path d="M767 270 Q745 230 747 190 Q746 170 735 150"/>
+  <path d="M780 280 Q800 245 800 205 Q798 185 810 164"/>
+  <path d="M767 355 Q725 335 702 300"/>
+ </g>
+ <g fill="none" stroke="#8c6040" stroke-width="4" stroke-linecap="round">
+  <path d="M706 225l-15-28 M825 220l17-27 M747 190l-15-23 M800 205l12-27"/>
+ </g>
+ <g fill="#95603d">
+  <path d="M680 185q-12-22 5-25q14 9-5 25Z"/>
+  <path d="M854 180q-7-22 12-24q8 15-12 24Z"/>
+  <path d="M735 150q-12-17 3-24q13 10-3 24Z"/>
+  <path d="M810 164q-8-18 9-25q12 13-9 25Z"/>
+ </g>
+ ${web}${bats}${lanterns}${pumpkins}
+ `;
+}
+
+function appleTree(d, kind) {
+ let foliage = "";
+ let fruit = "";
+ let blossom = "";
+
+ if (kind === "bloom") {
+  foliage = `
+   <g fill="#76a95c" stroke="#477b43" stroke-width="2">
+    <circle cx="720" cy="230" r="48"/><circle cx="770" cy="195" r="52"/>
+    <circle cx="817" cy="235" r="47"/><circle cx="750" cy="270" r="48"/>
+    <circle cx="805" cy="280" r="43"/>
+   </g>`;
+  blossom = `
+   <g fill="#fff0f4" stroke="#e7a7ba" stroke-width="1.5">
+    <g transform="translate(720 222)"><circle cy="-8" r="8"/><circle cx="8" r="8"/><circle cy="8" r="8"/><circle cx="-8" r="8"/><circle r="5" fill="#efc95d"/></g>
+    <g transform="translate(770 190)"><circle cy="-8" r="8"/><circle cx="8" r="8"/><circle cy="8" r="8"/><circle cx="-8" r="8"/><circle r="5" fill="#efc95d"/></g>
+    <g transform="translate(817 230)"><circle cy="-8" r="8"/><circle cx="8" r="8"/><circle cy="8" r="8"/><circle cx="-8" r="8"/><circle r="5" fill="#efc95d"/></g>
+    <g transform="translate(750 270)"><circle cy="-8" r="8"/><circle cx="8" r="8"/><circle cy="8" r="8"/><circle cx="-8" r="8"/><circle r="5" fill="#efc95d"/></g>
+    <g transform="translate(805 280)"><circle cy="-8" r="8"/><circle cx="8" r="8"/><circle cy="8" r="8"/><circle cx="-8" r="8"/><circle r="5" fill="#efc95d"/></g>
+   </g>`;
+ } else if (kind === "green" || kind === "ripe") {
+  foliage = `
+   <g fill="#3d8b4e" stroke="#24653c" stroke-width="2">
+    <circle cx="720" cy="230" r="48"/><circle cx="770" cy="195" r="52"/>
+    <circle cx="817" cy="235" r="47"/><circle cx="750" cy="270" r="48"/>
+    <circle cx="805" cy="280" r="43"/>
+   </g>
+   <g fill="#75bd5c">
+    <ellipse cx="720" cy="210" rx="20" ry="10" transform="rotate(-30 720 210)"/>
+    <ellipse cx="780" cy="180" rx="22" ry="10" transform="rotate(25 780 180)"/>
+    <ellipse cx="830" cy="235" rx="20" ry="10" transform="rotate(-25 830 235)"/>
+    <ellipse cx="755" cy="260" rx="20" ry="10" transform="rotate(20 755 260)"/>
+   </g>`;
+  if (kind === "green") {
+   fruit = `
+    <g fill="#8dc94d" stroke="#477c32" stroke-width="2">
+     <circle cx="720" cy="248" r="7"/><circle cx="760" cy="210" r="7"/>
+     <circle cx="810" cy="245" r="7"/><circle cx="785" cy="280" r="7"/>
+     <circle cx="740" cy="285" r="7"/><circle cx="830" cy="270" r="7"/>
+    </g>`;
+  } else {
+   fruit = `
+    <g fill="#d94339" stroke="#8c3029" stroke-width="2">
+     <path d="M713 245 Q701 231 715 225 Q728 224 727 239 Q724 252 713 245Z"/>
+     <path d="M760 207 Q747 193 761 187 Q775 186 774 201 Q771 214 760 207Z"/>
+     <path d="M811 244 Q798 230 812 224 Q826 223 825 238 Q822 251 811 244Z"/>
+     <path d="M785 280 Q772 266 786 260 Q800 259 799 274 Q796 287 785 280Z"/>
+     <path d="M740 285 Q727 271 741 265 Q755 264 754 279 Q751 292 740 285Z"/>
+    </g>`;
+  }
+ }
+
+ const dryBranches = kind === "dry" ? `
+  <g fill="none" stroke="#66432f" stroke-width="8" stroke-linecap="round">
+   <path d="M770 420 Q770 330 760 270 Q744 225 720 205"/>
+   <path d="M760 290 Q720 260 700 220 M720 260l-20-40"/>
+   <path d="M766 320 Q810 270 835 220 M810 270l25-50"/>
+   <path d="M760 260 Q750 210 770 175 M770 220l20-30"/>
+   <path d="M770 350 Q725 330 700 300"/>
+  </g>` : `
+  <g fill="none" stroke="#704a31" stroke-width="12" stroke-linecap="round">
+   <path d="M770 420 Q770 330 760 270 Q744 225 720 205"/>
+   <path d="M760 290 Q720 260 700 220"/>
+   <path d="M766 320 Q810 270 835 220"/>
+   <path d="M760 260 Q750 210 770 175"/>
+  </g>`;
+
+ const fallen = d.fallen ? `
+  <g stroke="#8c3029" stroke-width="2" fill="#d94339">
+   <path d="M680 426 Q672 415 682 411 Q693 410 692 422 Q690 432 680 426Z"/>
+   <path d="M715 435 Q704 422 717 418 Q730 419 727 431 Q724 440 715 435Z"/>
+   <path d="M815 428 Q804 415 817 411 Q830 412 827 424 Q824 434 815 428Z"/>
+   <path d="M850 435 Q840 423 852 419 Q864 420 861 432 Q858 441 850 435Z"/>
+  </g>` : "";
+
+ return `
+ <ellipse cx="770" cy="432" rx="110" ry="12" fill="#203b2d" opacity=".25"/>
+ <path d="M755 420 Q765 350 750 295 Q745 260 760 220 Q770 265 773 300 Q790 355 785 420Z"
+  fill="#805034" stroke="#563827" stroke-width="5"/>
+ ${dryBranches}
+ ${foliage}${blossom}${fruit}${fallen}
+ `;
+}
+
+function drawTree() {
+ const d = state.decor[state.tree];
+ let markup = "";
+
+ if (state.tree === "spruce") markup = spruce(d);
+ if (state.tree === "maple") markup = maple(d);
+ if (state.tree === "apple") markup = appleTree(d, state.apple);
+
+ const brickColors = ["#858b8f","#969da0","#747b80","#a0a5a7"];
+ const bricks = Array.from({length:24}, (_,i) => {
+  const a = i * Math.PI * 2 / 24;
+  const x = 770 + 78 * Math.cos(a);
+  const y = 431 + 23 * Math.sin(a);
+  const angle = Math.atan2(23 * Math.cos(a), -78 * Math.sin(a)) * 180 / Math.PI;
+  const color = brickColors[i % brickColors.length];
+  return `<g transform="translate(${x} ${y}) rotate(${angle})">
+   <rect x="-8" y="-7" width="16" height="14" rx="1.5"
+    fill="${color}" stroke="#42494d" stroke-width="1.5"/>
+   <path d="M-6 -4 H6" stroke="#c1c6c8" stroke-width="1.2" opacity=".65"/>
+   <path d="M-6 5 H6" stroke="#343a3e" stroke-width="1" opacity=".65"/>
+  </g>`;
+ }).join("");
+
+ const flowerbed = `
+  <ellipse cx="770" cy="435" rx="91" ry="29"
+   fill="#17251f" opacity=".3"/>
+  <ellipse cx="770" cy="431" rx="65" ry="12"
+   fill="#594735" stroke="#3c332b" stroke-width="2"/>
+  ${bricks}
+ `;
+
+ slot.innerHTML = flowerbed + markup;
+}
+
+function button(action, value, label, active) {
+ return `<button type="button" class="${active ? "tree-choice active" : "tree-choice"}"
+  data-action="${action}" data-value="${value}">${label}</button>`;
+}
+
+function option(action, key, label, active) {
+ return `<button type="button" class="tree-option ${active ? "active" : ""}"
+  data-action="${action}" data-value="${key}">
+  <span>${label}</span><span>${active ? "✓" : "+"}</span></button>`;
+}
+
+function render() {
+ document.querySelectorAll(".tree-tab").forEach(b => {
+  b.classList.toggle("active", b.dataset.value === state.tab);
+ });
+
+ let html = "";
+
+ if (state.tab === "trees") {
+  html += `<div class="tree-section-title">Выбери дерево</div>
+   <div class="tree-choice-list">
+    ${button("tree","spruce","🌲 Новогодняя ель",state.tree==="spruce")}
+    ${button("tree","maple","🍂 Жуткий клён",state.tree==="maple")}
+    ${button("tree","apple","🍎 Яблоня",state.tree==="apple")}
+   </div>`;
+
+  if (state.tree === "apple") {
+   html += `<div class="tree-section-title">Состояние яблони</div>
+    <div class="apple-states">
+     ${button("apple","dry","Сухая",state.apple==="dry")}
+     ${button("apple","bloom","Цветущая",state.apple==="bloom")}
+     ${button("apple","green","Зелёные яблоки",state.apple==="green")}
+     ${button("apple","ripe","Спелые яблоки",state.apple==="ripe")}
+    </div>`;
+  }
+  html += `<p class="tree-help">Выбранное дерево заменяет предыдущее. На сцене одновременно находится одно дерево.</p>`;
+ } else {
+  if (state.tree === "spruce") {
+   const d = state.decor.spruce;
+   html += `<div class="tree-section-title">Украшения для ели</div><div class="tree-options">
+    ${option("decor","ornaments","Ёлочные игрушки",d.ornaments)}
+    ${option("decor","lights","Светящаяся гирлянда",d.lights)}
+    ${option("decor","star","Звезда на макушке",d.star)}
+    ${option("decor","gifts","Подарки под ёлкой",d.gifts)}
+   </div>`;
+  } else if (state.tree === "maple") {
+   const d = state.decor.maple;
+   html += `<div class="tree-section-title">Хэллоуинский декор</div><div class="tree-options">
+    ${option("decor","bats","Летучие мыши",d.bats)}
+    ${option("decor","web","Паутина",d.web)}
+    ${option("decor","lanterns","Фонарики",d.lanterns)}
+    ${option("decor","pumpkins","Тыквы под деревом",d.pumpkins)}
+   </div>`;
+  } else {
+   const d = state.decor.apple;
+   html += `<div class="tree-section-title">Украшения для яблони</div><div class="tree-options">
+    ${option("decor","fallen","Опавшие яблоки",d.fallen)}
+   </div>`;
+  }
+  html += `<p class="tree-help">Украшения можно включать и выключать. Они сохраняются при переключении вкладок.</p>`;
+ }
+
+ root.innerHTML = html;
+ status.textContent =
+  (state.tree === "spruce" ? "Выбрана новогодняя ель" :
+   state.tree === "maple" ? "Выбран жуткий сухой клён" :
+   "Выбрана яблоня") +
+  " · " + (state.tab === "trees" ? "Настройка дерева" : "Настройка украшений");
+
+ drawTree();
+}
+
+document.getElementById("treeTools").addEventListener("click", function(e) {
+ const b = e.target.closest("button[data-action]");
+ if (!b) return;
+
+ const action = b.dataset.action;
+ const value = b.dataset.value;
+
+ if (action === "tab") {
+  state.tab = value;
+ } else if (action === "tree") {
+  state.tree = value;
+ } else if (action === "apple") {
+  state.apple = value;
+ } else if (action === "decor") {
+  const d = state.decor[state.tree];
+  d[value] = !d[value];
+ }
+
+ render();
+});
+
+render();
+})();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
